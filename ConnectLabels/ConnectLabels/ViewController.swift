@@ -47,6 +47,7 @@ class ViewController: UIViewController {
             _ = self.labels.map {
                 if $0.frame.contains(origin) {
                     self.originLabel = $0
+                    self.label_FoundWord.text!.append($0.text!.first!)
                 }
             }
             
@@ -60,16 +61,28 @@ class ViewController: UIViewController {
             
             print("CHANGED")
             
-            _ = self.labels.map {
+            self.labels.forEach { (label) in
+                
                 
                 guard let originLabel = self.originLabel else { return }
-                if $0.frame.contains(pt) && !originLabel.frame.contains(pt) {
+                if label.frame.contains(pt) && !originLabel.frame.contains(pt) {
                     print("TOUCHED!!! 🎉🎉🎉")
                     path.close()
                     
                     
+                    DispatchQueue.once(token: "\(label.tag)", block: {
+                        // create new path/line.
+                        // set new origin
+                        self.origin = pt
+                        shapeLayer = createShapeLayer(for: gesture.view!)
+                        self.label_FoundWord.text!.append(label.text!.first!)
+                    })
+                    
+                    
                 }
+                
             }
+
 
         } else if gesture.state == .failed || gesture.state == .cancelled {
             shapeLayer = nil
@@ -93,6 +106,7 @@ class ViewController: UIViewController {
     func setupData() {
         if self.sampleWord.count > 7 { return }
 
+        self.label_FoundWord.text = ""
         self.labels.removeAll()
 
         _ = self.coloringView.layer.sublayers?.map {
@@ -116,3 +130,37 @@ class ViewController: UIViewController {
 
 }
 
+
+
+
+import UIKit
+
+extension DispatchQueue {
+    private static var _onceTracker = [String]()
+    
+    class func once(file: String = #file, function: String = #function, line: Int = #line, block: (()->Void)) {
+        let token = file + ":" + function + ":" + String(line)
+        once(token: token, block: block)
+    }
+    
+    /**
+     Executes a block of code, associated with a unique token, only once.  The code is thread safe and will
+     only execute the code once even in the presence of multithreaded calls.
+     
+     - parameter token: A unique reverse DNS style name such as com.vectorform.<name> or a GUID
+     - parameter block: Block to execute once
+     */
+    
+    class func once(token: String, block: (()->Void)) {
+        objc_sync_enter(self)
+        defer { objc_sync_exit(self) }
+        
+        
+        if _onceTracker.contains(token) {
+            return
+        }
+        
+        _onceTracker.append(token)
+        block()
+    }
+}
