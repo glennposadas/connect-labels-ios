@@ -17,6 +17,7 @@ class ViewController: UIViewController {
 
     private var shapeLayer: CAShapeLayer!
     private var origin: CGPoint!
+    private var originLabel: UILabel?
 
     var sampleWord = "LOVE"
 
@@ -43,6 +44,12 @@ class ViewController: UIViewController {
             shapeLayer = createShapeLayer(for: gesture.view!)
             origin = gesture.location(in: gesture.view)
             
+            _ = self.labels.map {
+                if $0.frame.contains(origin) {
+                    self.originLabel = $0
+                }
+            }
+            
         } else if gesture.state == .changed {
             let path = UIBezierPath()
             path.move(to: origin)
@@ -50,8 +57,13 @@ class ViewController: UIViewController {
             shapeLayer.path = path.cgPath
 
             let pt = gesture.location(in: gesture.view)
+            
+            print("CHANGED")
+            
             _ = self.labels.map {
-                if $0.frame.contains(pt) {
+                
+                guard let originLabel = self.originLabel else { return }
+                if $0.frame.contains(pt) && !originLabel.frame.contains(pt) {
                     print("TOUCHED!!! 🎉🎉🎉")
                     path.close()
                     
@@ -84,20 +96,21 @@ class ViewController: UIViewController {
         self.labels.removeAll()
 
         _ = self.coloringView.layer.sublayers?.map {
-            if $0 == shapeLayer {
-                shapeLayer.removeFromSuperlayer()
+            if $0 is CAShapeLayer {
+                $0.removeFromSuperlayer()
             }
+            
         }
 
         let subviews = self.coloringView.subviews.shuffled() as! [UILabel]
         _ = subviews.map {
             $0.text = ""
-            self.labels.append($0)
         }
 
         for (index, letter) in self.sampleWord.enumerated() {
             let label = subviews[index]
             label.text = "\(letter)"
+            self.labels.append(label)
         }
     }
 
