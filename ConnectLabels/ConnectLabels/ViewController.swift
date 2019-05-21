@@ -22,6 +22,7 @@ class ViewController: UIViewController {
     var sampleWord = "LOVE"
 
     var labels = [UILabel]()
+    var connectedLabels = Set<UILabel>()
 
     // MARK: - Functions
 
@@ -39,15 +40,21 @@ class ViewController: UIViewController {
         return shapeLayer
     }
 
-    @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
+    @objc func handlePan(_ gesture: UILongPressGestureRecognizer) {
         if gesture.state == .began {
             shapeLayer = createShapeLayer(for: gesture.view!)
             origin = gesture.location(in: gesture.view)
+            
+//            let v = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 10))
+//            v.backgroundColor = .blue
+//            self.coloringView.addSubview(v)
+//            v.center = origin
             
             _ = self.labels.map {
                 if $0.frame.contains(origin) {
                     self.originLabel = $0
                     self.label_FoundWord.text!.append($0.text!.first!)
+                    self.connectedLabels.insert($0)
                 }
             }
             
@@ -65,20 +72,22 @@ class ViewController: UIViewController {
                 
                 
                 guard let originLabel = self.originLabel else { return }
-                if label.frame.contains(pt) && !originLabel.frame.contains(pt) {
+                if label.frame.contains(pt) && !originLabel.bounds.contains(pt) {
                     print("TOUCHED!!! 🎉🎉🎉")
                     path.close()
                     
-                    
-                    DispatchQueue.once(token: "\(label.tag)", block: {
+                    if !self.connectedLabels.contains(where: { (currentLabel) -> Bool in
+                        return currentLabel.tag == label.tag
+                    }) {
                         // create new path/line.
                         // set new origin
                         self.origin = pt
-                        shapeLayer = createShapeLayer(for: gesture.view!)
+                        self.shapeLayer = self.createShapeLayer(for: gesture.view!)
                         self.label_FoundWord.text!.append(label.text!.first!)
-                    })
-                    
-                    
+                        
+                        self.connectedLabels.insert(label)
+                    }
+
                 }
                 
             }
@@ -86,9 +95,11 @@ class ViewController: UIViewController {
 
         } else if gesture.state == .failed || gesture.state == .cancelled {
             shapeLayer = nil
+            print("CANCELED OR FAILED")
         } else if gesture.state == .ended {
             shapeLayer = nil
             // Do something.
+            print("ENDED")
         }
     }
 
@@ -99,7 +110,8 @@ class ViewController: UIViewController {
 
         self.setupData()
 
-        let pan = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+        let pan = UILongPressGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
+        pan.minimumPressDuration = 0
         self.coloringView.addGestureRecognizer(pan)
     }
 
@@ -108,6 +120,7 @@ class ViewController: UIViewController {
 
         self.label_FoundWord.text = ""
         self.labels.removeAll()
+        self.connectedLabels.removeAll()
 
         _ = self.coloringView.layer.sublayers?.map {
             if $0 is CAShapeLayer {
@@ -119,19 +132,30 @@ class ViewController: UIViewController {
         let subviews = self.coloringView.subviews.shuffled() as! [UILabel]
         _ = subviews.map {
             $0.text = ""
+            $0.backgroundColor = .clear
         }
 
         for (index, letter) in self.sampleWord.enumerated() {
             let label = subviews[index]
             label.text = "\(letter)"
+            label.backgroundColor = .random
             self.labels.append(label)
+            label.sizeToFit()
         }
+
     }
 
 }
 
 
-
+extension UIColor {
+    static var random: UIColor {
+        return UIColor(red: .random(in: 0...1),
+                       green: .random(in: 0...1),
+                       blue: .random(in: 0...1),
+                       alpha: 1.0)
+    }
+}
 
 import UIKit
 
