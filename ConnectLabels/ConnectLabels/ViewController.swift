@@ -63,16 +63,7 @@ class ViewController: UIViewController {
                     self.label_FoundWord.text!.append(label.text!.first!)
                     self.connectedLabels.insert(label)
                     
-                    UIView.animateKeyframes(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
-                        label.backgroundColor = .random
-                        label.layoutIfNeeded()
-                    }, completion: nil)
-                    
-                    UIView.animate(withDuration: 0.5, animations: {
-                        label.layer.cornerRadius = label.frame.width / 2
-                        label.clipsToBounds = true
-                        label.layoutIfNeeded()
-                    })
+                    self.animateSelectedLabel(label)
                 }
 
             })
@@ -101,10 +92,13 @@ class ViewController: UIViewController {
                         // create new path/line.
                         // set new origin
                         self.origin = pt
+                        
                         self.shapeLayer = self.createShapeLayer(for: gesture.view!)
                         self.label_FoundWord.text!.append(label.text!.first!)
-                        
                         self.connectedLabels.insert(label)
+                        
+                        self.animateSelectedLabel(label)
+                        
                     }
 
                 }
@@ -136,6 +130,20 @@ class ViewController: UIViewController {
             
             self.tryAgain()
         }
+    }
+    
+    func animateSelectedLabel(_ label: UILabel) {
+        UIView.animateKeyframes(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            label.backgroundColor = .random
+            label.layoutIfNeeded()
+        }, completion: nil)
+        
+        UIView.animate(withDuration: 0.5, animations: {
+            label.layer.cornerRadius = label.frame.width / 2
+            label.clipsToBounds = true
+            label.layoutIfNeeded()
+        })
+
     }
     
     func tryAgain() {
