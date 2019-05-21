@@ -12,6 +12,9 @@ class ViewController: UIViewController {
 
     // MARK: - Properties
 
+    @IBOutlet weak var label_WordNotFound: UILabel!
+    @IBOutlet weak var topConstraint: NSLayoutConstraint!
+    
     @IBOutlet weak var label_FoundWord: UILabel!
     @IBOutlet weak var coloringView: UIView!
 
@@ -21,7 +24,11 @@ class ViewController: UIViewController {
 
     var sampleWord = "LOVE"
 
+    /// Contains all labels
+    var shuffledSubviews = [UILabel]()
+    /// Contains only the labels with texts
     var labels = [UILabel]()
+    /// Contains the connected labels.
     var connectedLabels = Set<UILabel>()
 
     // MARK: - Functions
@@ -50,13 +57,25 @@ class ViewController: UIViewController {
 //            self.coloringView.addSubview(v)
 //            v.center = origin
             
-            _ = self.labels.map {
-                if $0.frame.contains(origin) {
-                    self.originLabel = $0
-                    self.label_FoundWord.text!.append($0.text!.first!)
-                    self.connectedLabels.insert($0)
+            self.labels.forEach({ (label) in
+                if label.frame.contains(origin) {
+                    self.originLabel = label
+                    self.label_FoundWord.text!.append(label.text!.first!)
+                    self.connectedLabels.insert(label)
+                    
+                    UIView.animateKeyframes(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+                        label.backgroundColor = .random
+                        label.layoutIfNeeded()
+                    }, completion: nil)
+                    
+                    UIView.animate(withDuration: 0.5, animations: {
+                        label.layer.cornerRadius = label.frame.width / 2
+                        label.clipsToBounds = true
+                        label.layoutIfNeeded()
+                    })
                 }
-            }
+
+            })
             
         } else if gesture.state == .changed {
             let path = UIBezierPath()
@@ -100,7 +119,36 @@ class ViewController: UIViewController {
             shapeLayer = nil
             // Do something.
             print("ENDED")
+            
+            if self.connectedLabels.count <= 1 {
+                // Means no connection happened further.
+                self.tryAgain()
+                return
+            }
+            
+            // Business logic / Game logic.
+            // Check if found a word!
+            if self.label_FoundWord.text == self.sampleWord {
+                self.showToast(success: true)
+            } else {
+                self.showToast(success: false)
+            }
+            
+            self.tryAgain()
         }
+    }
+    
+    func tryAgain() {
+        self.connectedLabels.removeAll()
+        self.origin = .zero
+        self.removeAllLines()
+        UIView.animateKeyframes(withDuration: 1.0, delay: 0, options: [.repeat, .autoreverse], animations: {
+            self.labels.forEach({ (label) in
+                label.backgroundColor = .clear
+            })
+        }, completion: nil)
+        
+        self.label_FoundWord.text = ""
     }
 
     // MARK: Overrides
@@ -122,29 +170,52 @@ class ViewController: UIViewController {
         self.labels.removeAll()
         self.connectedLabels.removeAll()
 
+        self.removeAllLines()
+
+        self.shuffledSubviews = self.coloringView.subviews.shuffled() as! [UILabel]
+        
+        self.clearAllLabelsAndTheirAttributes()
+
+        for (index, letter) in self.sampleWord.enumerated() {
+            let label = self.shuffledSubviews[index]
+            label.text = "\(letter)"
+            self.labels.append(label)
+            //label.sizeToFit()
+        }
+
+    }
+    
+    func clearAllLabelsAndTheirAttributes() {
+        _ = self.shuffledSubviews.map {
+            $0.text = ""
+            $0.backgroundColor = .clear
+        }
+    }
+    
+    func removeAllLines() {
         _ = self.coloringView.layer.sublayers?.map {
             if $0 is CAShapeLayer {
                 $0.removeFromSuperlayer()
             }
-            
         }
-
-        let subviews = self.coloringView.subviews.shuffled() as! [UILabel]
-        _ = subviews.map {
-            $0.text = ""
-            $0.backgroundColor = .clear
-        }
-
-        for (index, letter) in self.sampleWord.enumerated() {
-            let label = subviews[index]
-            label.text = "\(letter)"
-            label.backgroundColor = .random
-            self.labels.append(label)
-            label.sizeToFit()
-        }
-
     }
 
+    func showToast(success: Bool) {
+        self.label_WordNotFound.backgroundColor = success ? UIColor(red:0.3, green:0.69, blue:0.31, alpha:1) : UIColor(red:0.82, green:0.01, blue:0.11, alpha:1)
+        self.label_WordNotFound.text = success ? "WELL DONE! 🎉" : "WORD NOT FOUND! 🙄"
+        
+        UIView.animate(withDuration: 0.3) {
+            self.topConstraint.constant = 30.0
+            self.view.layoutIfNeeded()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
+            UIView.animate(withDuration: 0.3) {
+                self.topConstraint.constant = -100
+                self.view.layoutIfNeeded()
+            }
+        }
+    }
 }
 
 
